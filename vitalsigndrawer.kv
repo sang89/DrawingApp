@@ -1,0 +1,96 @@
+<ParentLayout>
+    background_color : 'white'
+
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint : 1, 1
+
+        DrawInputWidget:
+            id : draw_area
+
+            canvas:
+                Color :
+                    rgba: 1, 1, 1, 1
+
+            size_hint: 1, 0.7
+
+        BoxLayout:
+            orientation : 'horizontal'
+            size_hint: 1, 0.3
+
+            Button:
+                text : 'Clear'
+                background_color : 0, 0, 1, 1
+                on_press : root.clear_btn_pressed_handler(self)
+
+            BoxLayout:
+                orientation : 'vertical'
+
+                BoxLayout:
+                    orientation : 'horizontal'
+
+                    Label:
+                        text: 'Output file name'
+                        color : 0, 0, 0, 1
+
+                    TextInput:
+                        multiline : False
+                        on_text : root.output_file_text_changed_handler(self, self.text)
+
+                BoxLayout :
+                    orientation : 'horizontal'
+
+                    Label :
+                        text: 'Choose a vital sign'
+                        color : 0, 0, 0, 1
+
+                    Spinner:
+                        id: vital_sign_spinner
+                        text: 'Choose one'
+                        background_color: 0, 1, 1, 1
+                        values: 'Blood pressure', 'Blood glucose', 'Heart rate', 'Systolic', 'Diastolic'
+                        on_text: root.on_vital_sign_spinner_select(self.text)
+
+                GridLayout:
+                    cols : 4
+
+                    Label:
+                        text: 'x_min'
+                        color : 0, 0, 0, 1
+
+                    TextInput:
+                        text: '0'
+                        on_text : root.axis_range_changed(self, self.text, 'x_min')
+
+                    Label:
+                        text: 'x_max'
+                        color: 0, 0, 0, 1
+
+                    TextInput:
+                        text: '0'
+                        on_text : root.axis_range_changed(self, self.text, 'x_max')
+
+                    Label:
+                        text: 'y_min'
+                        color: 0, 0, 0, 1
+
+                    TextInput:
+                        text: '0'
+                        on_text : root.axis_range_changed(self, self.text, 'y_min')
+
+                    Label:
+                        text: 'y_max'
+                        color: 0, 0, 0, 1
+
+                    TextInput:
+                        text: '0'
+                        on_text : root.axis_range_changed(self, self.text, 'y_max')
+
+            Button:
+                text : 'Apply'
+                on_release : root.apply_data(self)
+
+
+
+
+
