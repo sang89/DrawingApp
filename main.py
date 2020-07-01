@@ -52,15 +52,14 @@ class DrawInputWidget(StencilView):
         self.y_data_array = []
 
     def on_touch_down(self, touch):
-        #print(touch)
         with self.canvas:
             touch.ud["line"] = Line(points=(touch.x, touch.y))
 
     def on_touch_move(self, touch):
-        #print(touch)
-        touch.ud["line"].points += (touch.x, touch.y)
-        self.x_data_array.append(touch.x)
-        self.y_data_array.append(touch.y)
+        if self.collide_point(touch.x, touch.y):
+            touch.ud["line"].points += (touch.x, touch.y)
+            self.x_data_array.append(touch.x)
+            self.y_data_array.append(touch.y)
 
     def on_touch_up(self, touch):
         print("RELEASED!",touch)
