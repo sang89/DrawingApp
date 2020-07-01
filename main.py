@@ -30,13 +30,26 @@ yellow = Color(1, 0.941, 0.36)
 purple = Color(0.949, 0.36, 1)
 orange = Color(0.827, 0.615, 0.035)
 
+ALL_VITAL_SIGNS = ['Blood pressure', 'Blood glucose', 'Heart rate', 'Systolic', 'Diastolic']
+
+class VitalSignInfo:
+    def __init__(self, aName = ''):
+        self.name = aName
+        self.x_min = 0
+        self.x_max = 0
+        self.y_min = 0
+        self.y_max = 0
+        self.x_data_array = []
+        self.y_data_array = []
+
+    def isPopulated(self):
+        return len(self.x_data_array) > 0 or len(self.y_data_array) > 0
 
 class DrawInputWidget(StencilView):
     def __init__(self, **kwargs):
         super(DrawInputWidget, self).__init__(**kwargs)
         self.x_data_array = []
         self.y_data_array = []
-
 
     def on_touch_down(self, touch):
         #print(touch)
@@ -59,39 +72,50 @@ def mapIntervals(a, b, c, d):
     n = c - m * a
     return m, n
 
+
 class ParentLayout(StackLayout):
     def __init__(self, **kwargs):
         super(ParentLayout, self).__init__(**kwargs)
         self.output_file_name = 'Output file name'
         self.vital_sign = ''
+        self.old_vital_sign = ''
         self.x_min = 0
         self.x_max = 100
         self.y_min = 0
         self.y_max = 100
-        self.x_data_array = []
-        self.y_data_array = []
+        self.data = dict()
+        for item in ALL_VITAL_SIGNS:
+            newInfo = VitalSignInfo(item)
+            self.data[newInfo.name] = newInfo
 
     # Scale data linearly in each x and y component
     def scale_data(self):
-        x_scaled_array = []
-        y_scaled_array = []
-        m_x, n_x = mapIntervals(min(self.x_data_array), max(self.x_data_array), self.x_min, self.x_max)
-        m_y, n_y = mapIntervals(min(self.y_data_array), max(self.y_data_array), self.y_min, self.y_max)
-        for x in self.x_data_array:
-            scaledX = m_x * x + n_x
-            x_scaled_array.append(scaledX)
-        for y in self.y_data_array:
-            scaledY = m_y * y + n_y
-            y_scaled_array.append(scaledY)
+        for item in ALL_VITAL_SIGNS:
+            current_data = self.data[item]
+            if current_data.isPopulated():
+                x_scaled_array = []
+                y_scaled_array = []
 
-        self.x_data_array = x_scaled_array
-        self.y_data_array = y_scaled_array
+                m_x, n_x = mapIntervals(min(current_data.x_data_array), max(current_data.x_data_array), current_data.x_min, current_data.x_max)
+                m_y, n_y = mapIntervals(min(current_data.y_data_array), max(current_data.y_data_array), current_data.y_min, current_data.y_max)
+                for x in current_data.x_data_array:
+                    scaledX = m_x * x + n_x
+                    x_scaled_array.append(scaledX)
+                for y in current_data.y_data_array:
+                    scaledY = m_y * y + n_y
+                    y_scaled_array.append(scaledY)
+
+                current_data.x_data_array = x_scaled_array
+                current_data.y_data_array = y_scaled_array
 
     # Smooth the data for better chart drawing
     def smooth_data(self):
         dof = 6
         window_size = 51
-        self.y_data_array = savgol_filter(self.y_data_array, window_size, dof)
+        for item in ALL_VITAL_SIGNS:
+            current_data = self.data[item]
+            if current_data.isPopulated():
+                current_data.y_data_array = savgol_filter(current_data.y_data_array, window_size, dof)
 
     def print_data_to_output_file(self):
         fileName = self.output_file_name + '.xlsx'
@@ -104,12 +128,24 @@ class ParentLayout(StackLayout):
         with pd.ExcelWriter(fileName, engine='openpyxl') as writer:
             writer.book = book
             writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
-            pd.DataFrame(self.x_data_array).to_excel(writer, sheet_name=self.vital_sign)
+            for item in ALL_VITAL_SIGNS:
+                current_data = self.data[item]
+                if current_data.isPopulated():
+                    pd.DataFrame(current_data.x_data_array).to_excel(writer, sheet_name = current_data.name)
             writer.save()
 
     def apply_data(self, obj):
-        self.x_data_array = self.ids.draw_area.x_data_array
-        self.y_data_array = self.ids.draw_area.y_data_array
+        # make sure to add the last vital_sign choice
+        current_data = self.data[self.vital_sign]
+        if not current_data.isPopulated():
+            newInfo = VitalSignInfo(self.vital_sign)
+            newInfo.x_data_array = self.ids.draw_area.x_data_array
+            newInfo.y_data_array = self.ids.draw_area.y_data_array
+            newInfo.x_max = float(self.ids.x_max.text)
+            newInfo.x_min = float(self.ids.x_min.text)
+            newInfo.y_min = float(self.ids.y_min.text)
+            newInfo.y_max = float(self.ids.y_max.text)
+            self.data[self.vital_sign] = newInfo
 
         self.scale_data()
         self.smooth_data()
@@ -127,30 +163,55 @@ class ParentLayout(StackLayout):
         self.obj.add(self.vital_sign_to_color(self.vital_sign))
         self.ids.draw_area.canvas.add(self.obj)
 
+        # reset the data
+        for item in ALL_VITAL_SIGNS:
+            newInfo = VitalSignInfo(item)
+            self.data[newInfo.name] = newInfo
+
+        # Reset range fields
+        self.ids.x_min.text = '0'
+        self.ids.x_max.text = '0'
+        self.ids.y_min.text = '0'
+        self.ids.y_max.text = '0'
+
     def axis_range_changed(self, instance, text, id):
         num = float(text)
 
         if (id == 'x_max'):
-            self.x_max = num
-            print('x-max changed to ' + str(self.x_max))
+            self.data[self.vital_sign].x_max = num
+            print('x-max changed to ' + str(self.data[self.vital_sign].x_max))
         elif (id == 'x_min'):
-            self.x_min = num
-            print('x-min changed to ' + str(self.x_min))
+            self.data[self.vital_sign].x_min = num
+            print('x-min changed to ' + str(self.data[self.vital_sign].x_min))
         elif (id == 'y_max'):
-            self.y_max = num
-            print('y_max changed to ' + str(self.y_max))
+            self.data[self.vital_sign].y_max = num
+            print('y_max changed to ' + str(self.data[self.vital_sign].y_max))
         elif (id == 'y_min'):
-            self.y_min = num
-            print('y_min changed to ' + str(self.y_min))
+            self.data[self.vital_sign].y_min = num
+            print('y_min changed to ' + str(self.data[self.vital_sign].y_min))
 
     def on_vital_sign_spinner_select(self, text):
         if (text != 'Choose one'):
+            if self.vital_sign != '':
+                self.data[self.vital_sign].x_data_array = self.ids.draw_area.x_data_array
+                self.data[self.vital_sign].y_data_array = self.ids.draw_area.y_data_array
+
             self.vital_sign = text
             self.obj = InstructionGroup()
             self.obj.add(self.vital_sign_to_color(text))
             self.ids.draw_area.canvas.add(self.obj)
 
+            # Update the range fields
+            self.ids.x_min.text = str(self.data[self.vital_sign].x_min)
+            self.ids.x_max.text = str(self.data[self.vital_sign].x_max)
+            self.ids.y_min.text = str(self.data[self.vital_sign].y_min)
+            self.ids.y_max.text = str(self.data[self.vital_sign].y_max)
+
         print(self.vital_sign + ' is selected')
+
+        # Clear current data
+        self.ids.draw_area.x_data_array = []
+        self.ids.draw_area.y_data_array = []
 
     def vital_sign_to_color(self, text):
         if (text == 'Blood pressure'):
