@@ -17,6 +17,7 @@ from openpyxl import load_workbook
 import xlsxwriter
 import pandas as pd
 import numpy as np
+from VSD_utils import *
 
 Window.clearcolor = (1, 1, 1, 1)
 
@@ -55,6 +56,7 @@ class DrawInputWidget(StencilView):
             touch.ud["line"] = Line(points=(touch.x, touch.y), width = 2)
 
     def on_touch_move(self, touch):
+        # check if the point is on the drawing area
         if self.collide_point(touch.x, touch.y):
             touch.ud["line"].points += (touch.x, touch.y)
             self.x_data_array.append(touch.x)
@@ -62,6 +64,7 @@ class DrawInputWidget(StencilView):
 
     def on_touch_up(self, touch):
         print("RELEASED!",touch)
+
 
 # We want to map the interval (a, b) one to one to (c, d)
 # Returning the coefficients in f(x) = mx + n
@@ -77,9 +80,9 @@ class ParentLayout(StackLayout):
         self.output_file_name = 'Output file name'
         self.vital_sign = ''
         self.x_min = 0
-        self.x_max = 100
+        self.x_max = 0
         self.y_min = 0
-        self.y_max = 100
+        self.y_max = 0
         self.data = dict()
         for item in ALL_VITAL_SIGNS:
             newInfo = VitalSignInfo(item)
@@ -108,11 +111,16 @@ class ParentLayout(StackLayout):
     # Smooth the data for better chart drawing
     def smooth_data(self):
         dof = 6
-        window_size = 51
+
         for item in ALL_VITAL_SIGNS:
             current_data = self.data[item]
             if current_data.isPopulated():
-                current_data.y_data_array = savgol_filter(current_data.y_data_array, window_size, dof)
+                current_y_array = current_data.y_data_array
+                window_size = min(51, len(current_y_array) )
+                current_y_array = savgol_filter(current_y_array, window_size, dof)
+                # Smoothing data may make value exceeds thresholds, so we need to adjust this
+                current_y_array[current_y_array > current_data.y_max] = current_data.y_max
+                current_y_array[current_y_array < current_data.y_min] = current_data.y_min
 
     def print_data_to_output_file(self):
         fileName = self.output_file_name + '.xlsx'
@@ -128,8 +136,41 @@ class ParentLayout(StackLayout):
             for item in ALL_VITAL_SIGNS:
                 current_data = self.data[item]
                 if current_data.isPopulated():
-                    pd.DataFrame(current_data.x_data_array).to_excel(writer, sheet_name = current_data.name)
+                    pd.DataFrame(current_data.y_data_array).to_excel(writer, sheet_name = current_data.name)
             writer.save()
+
+    # this functions will validate if all the fields are populated / valid
+    def validate_before_applying(self):
+        err_msg = ''
+
+        #check if output_file_name is already entered
+        if self.output_file_name == '':
+            err_msg = 'Output file name is not entered !!!'
+            show_message_box(err_msg, 'Error')
+            return False
+
+        num_of_chosen_signs = 0
+        for item in ALL_VITAL_SIGNS:
+            current_data = self.data[item]
+            if current_data.isPopulated():
+                if (current_data.x_min < 0) or (current_data.x_max < 0) or (current_data.y_min < 0) or (current_data.y_max < 0):
+                    show_message_box('Ranges cannot be negative !!!', 'Error')
+                    return False
+                elif (current_data.x_min >= current_data.x_max):
+                   err_msg = 'x_min >= x_max for ' + current_data.name
+                   show_message_box(err_msg, 'Error')
+                   return False
+                elif (current_data.y_min >= current_data.y_max):
+                   err_msg = 'x_min >= x_max for ' + current_data.name
+                   show_message_box(err_msg, 'Error')
+                   return False
+                num_of_chosen_signs += 1
+
+        if (num_of_chosen_signs == 0) and (self.vital_sign == ''):
+            show_message_box('None of the vital signs is chosen !!!', 'Error')
+            return False
+
+        return True
 
     def apply_data(self, obj):
         # make sure to add the last vital_sign choice
@@ -144,10 +185,12 @@ class ParentLayout(StackLayout):
             newInfo.y_max = float(self.ids.y_max.text)
             self.data[self.vital_sign] = newInfo
 
-        self.scale_data()
-        self.smooth_data()
-        self.print_data_to_output_file()
-        print('Data applied to ' + self.output_file_name)
+        # validate the options first
+        if self.validate_before_applying():
+            self.scale_data()
+            self.smooth_data()
+            self.print_data_to_output_file()
+            print('Data applied to ' + self.output_file_name)
 
     def output_file_text_changed_handler(self, instance, text):
         self.output_file_name = text
@@ -180,10 +223,10 @@ class ParentLayout(StackLayout):
 
         if (id == 'x_max'):
             self.data[self.vital_sign].x_max = num
-            print('x-max changed to ' + str(self.data[self.vital_sign].x_max))
+            print('x_max changed to ' + str(self.data[self.vital_sign].x_max))
         elif (id == 'x_min'):
             self.data[self.vital_sign].x_min = num
-            print('x-min changed to ' + str(self.data[self.vital_sign].x_min))
+            print('x_min changed to ' + str(self.data[self.vital_sign].x_min))
         elif (id == 'y_max'):
             self.data[self.vital_sign].y_max = num
             print('y_max changed to ' + str(self.data[self.vital_sign].y_max))
