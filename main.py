@@ -7,7 +7,6 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.stacklayout import StackLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.dropdown import DropDown
 from kivy.uix.stencilview import StencilView
 from kivy.uix.spinner import Spinner, SpinnerOption
@@ -53,7 +52,7 @@ class DrawInputWidget(StencilView):
 
     def on_touch_down(self, touch):
         with self.canvas:
-            touch.ud["line"] = Line(points=(touch.x, touch.y))
+            touch.ud["line"] = Line(points=(touch.x, touch.y), width = 2)
 
     def on_touch_move(self, touch):
         if self.collide_point(touch.x, touch.y):
@@ -77,7 +76,6 @@ class ParentLayout(StackLayout):
         super(ParentLayout, self).__init__(**kwargs)
         self.output_file_name = 'Output file name'
         self.vital_sign = ''
-        self.old_vital_sign = ''
         self.x_min = 0
         self.x_max = 100
         self.y_min = 0
@@ -172,6 +170,10 @@ class ParentLayout(StackLayout):
         self.ids.x_max.text = '0'
         self.ids.y_min.text = '0'
         self.ids.y_max.text = '0'
+
+        # Reset cached data
+        self.ids.draw_area.x_data_array = []
+        self.ids.draw_area.y_data_array = []
 
     def axis_range_changed(self, instance, text, id):
         num = float(text)
