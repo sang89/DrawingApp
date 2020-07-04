@@ -230,6 +230,7 @@ class ParentLayout(StackLayout):
                cntr += 1
 
         fig.savefig(self.output_file_name + '.png')
+        plt.show(fig)
 
     def output_file_text_changed_handler(self, instance, text):
         self.output_file_name = text
@@ -308,7 +309,7 @@ class ParentLayout(StackLayout):
         elif (text == 'Diastolic'):
             return purple
         else:
-            return white
+            return Window.clearcolor
 
 class VitalSignDrawer(App):
     def build(self):
