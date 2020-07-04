@@ -37,6 +37,17 @@
                         multiline : False
                         on_text : root.output_file_text_changed_handler(self, self.text)
 
+                BoxLayout:
+                    orientation : 'horizontal'
+
+                    Label:
+                        text: 'Save image'
+                        color : 0, 0, 0, 1
+
+                    CheckBox:
+                        id : save_img_chkbox
+                        active : True
+
                 BoxLayout :
                     orientation : 'horizontal'
 

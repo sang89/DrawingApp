@@ -10,6 +10,7 @@ from kivy.uix.stacklayout import StackLayout
 from kivy.uix.dropdown import DropDown
 from kivy.uix.stencilview import StencilView
 from kivy.uix.spinner import Spinner, SpinnerOption
+from kivy.uix.checkbox import CheckBox
 from kivy.core.window import Window
 from kivy.graphics import InstructionGroup, Color
 from scipy.signal import savgol_filter
@@ -17,6 +18,7 @@ from openpyxl import load_workbook
 import xlsxwriter
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from VSD_utils import *
 
 Window.clearcolor = (1, 1, 1, 1)
@@ -88,6 +90,13 @@ class ParentLayout(StackLayout):
             newInfo = VitalSignInfo(item)
             self.data[newInfo.name] = newInfo
 
+        self.ids.save_img_chkbox.bind(active = self.on_save_img_chkbox_active)
+        self.save_image_flag = True
+
+
+    def on_save_img_chkbox_active(self, checkbox, active):
+        self.save_image_flag = active
+
     # Scale data linearly in each x and y component
     def scale_data(self):
         for item in ALL_VITAL_SIGNS:
@@ -117,6 +126,9 @@ class ParentLayout(StackLayout):
             if current_data.isPopulated():
                 current_y_array = current_data.y_data_array
                 window_size = min(51, len(current_y_array) )
+                # window_size must be odd
+                if (window_size % 2 == 0):
+                    window_size = window_size - 1
                 current_y_array = savgol_filter(current_y_array, window_size, dof)
                 # Smoothing data may make value exceeds thresholds, so we need to adjust this
                 current_y_array[current_y_array > current_data.y_max] = current_data.y_max
@@ -187,10 +199,37 @@ class ParentLayout(StackLayout):
 
         # validate the options first
         if self.validate_before_applying():
+            # Scale data
             self.scale_data()
+
+            # Smoothing the data
             self.smooth_data()
+
+            # Print data to the output file
             self.print_data_to_output_file()
             print('Data applied to ' + self.output_file_name)
+
+            # Save the image
+            if self.save_image_flag:
+                self.save_image()
+
+    def save_image(self):
+        num_of_chosen_signs = 0
+        for item in ALL_VITAL_SIGNS:
+            current_data = self.data[item]
+            if current_data.isPopulated():
+                num_of_chosen_signs += 1
+
+        fig, axs = plt.subplots(num_of_chosen_signs)
+        cntr = 0
+        for item in ALL_VITAL_SIGNS:
+            current_data = self.data[item]
+            if current_data.isPopulated():
+               axs[cntr].plot(current_data.x_data_array, current_data.y_data_array)
+               axs[cntr].set_title(current_data.name)
+               cntr += 1
+
+        fig.savefig(self.output_file_name + '.png')
 
     def output_file_text_changed_handler(self, instance, text):
         self.output_file_name = text
