@@ -145,6 +145,7 @@ class ParentLayout(StackLayout):
         workbook = xlsxwriter.Workbook(fileName)
         workbook.close()
 
+        df = pd.DataFrame()
         book = load_workbook(fileName)
         with pd.ExcelWriter(fileName, engine='openpyxl') as writer:
             writer.book = book
@@ -152,8 +153,13 @@ class ParentLayout(StackLayout):
             for item in ALL_VITAL_SIGNS:
                 current_data = self.data[item]
                 if current_data.isPopulated():
-                    pd.DataFrame(current_data.y_data_array).to_excel(writer, sheet_name = current_data.name)
-            writer.save()
+                    new_column = pd.DataFrame()
+                    new_column[current_data.name] = current_data.y_data_array
+                    new_column.reset_index(drop = True, inplace = True)
+                    df = pd.concat([df, new_column], axis=1)
+
+        pd.DataFrame(df).to_excel(writer, sheet_name = 'Data')
+        writer.save()
 
     # this functions will validate if all the fields are populated / valid
     def validate_before_applying(self):
