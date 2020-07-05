@@ -92,10 +92,14 @@ class ParentLayout(StackLayout):
 
         self.ids.save_img_chkbox.bind(active = self.on_save_img_chkbox_active)
         self.save_image_flag = True
-
+        self.smooth_data_flag = True
+        self.ids.smooth_data_chkbox.bind(active = self.on_smooth_data_chkbox_active)
 
     def on_save_img_chkbox_active(self, checkbox, active):
         self.save_image_flag = active
+
+    def on_smooth_data_chkbox_active(self, checkbox, active):
+        self.smooth_data_flag = active
 
     # Scale data linearly in each x and y component
     def scale_data(self):
@@ -203,7 +207,8 @@ class ParentLayout(StackLayout):
             self.scale_data()
 
             # Smoothing the data
-            self.smooth_data()
+            if self.smooth_data_flag:
+                self.smooth_data()
 
             # Print data to the output file
             self.print_data_to_output_file()

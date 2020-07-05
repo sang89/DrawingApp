@@ -40,13 +40,23 @@
                 BoxLayout:
                     orientation : 'horizontal'
 
-                    Label:
-                        text: 'Save image'
-                        color : 0, 0, 0, 1
+                    BoxLayout
+                        Label:
+                            text: 'Save image'
+                            color : 0, 0, 0, 1
 
-                    CheckBox:
-                        id : save_img_chkbox
-                        active : True
+                        CheckBox:
+                            id : save_img_chkbox
+                            active : True
+
+                    BoxLayout
+                        Label:
+                            text: 'Smoothing data'
+                            color : 0, 0, 0, 1
+
+                        CheckBox:
+                            id : smooth_data_chkbox
+                            active : True
 
                 BoxLayout :
                     orientation : 'horizontal'
