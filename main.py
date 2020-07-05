@@ -68,14 +68,6 @@ class DrawInputWidget(StencilView):
         print("RELEASED!",touch)
 
 
-# We want to map the interval (a, b) one to one to (c, d)
-# Returning the coefficients in f(x) = mx + n
-def mapIntervals(a, b, c, d):
-    m  = (c - d) / (a - b)
-    n = c - m * a
-    return m, n
-
-
 class ParentLayout(StackLayout):
     def __init__(self, **kwargs):
         super(ParentLayout, self).__init__(**kwargs)
